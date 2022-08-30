@@ -1,0 +1,75 @@
+
+   ---
+--- This application loads a lot of small tables that are associated with Specialties
+---
+---
+---
+---
+USE Migration;
+
+STOP APPLICATION test_LOAD;
+UNDEPLOY APPLICATION test_LOAD;
+DROP APPLICATION test_LOAD CASCADE;
+CREATE APPLICATION test_LOAD;
+
+CREATE OR REPLACE SOURCE SQL_DBSource_link_H_specialties_aux_LOAD USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  DatabaseName: 'Artnet', 
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: '
+	   Artnet.dbo.SpecialtyRelation KeyColumns(SpecialtyId);
+	   Artnet.dbo.Specialties2MarketAlert KeyColumns(Specialty_id, Market_Alert_id);
+	   Artnet.dbo.SpecialtyTaxonomyScore KeyColumns(TaxonomyScopeId, SpecialtyId)'
+  )
+OUTPUT TO SQL_DBSource_link_H_specialties_aux_LOAD_OutputStream;
+
+
+-- consider putting created date in the tables to save pointless entries.
+--
+-- specialties_2_market_alert needs changed
+-- specialties_2_gallery needs created, changed
+-- specialties_2_event needs created, changed
+-- specialties_2_artwork needs changed
+-- specialties_2_artist needs changed
+-- specialties_2_collection needs created, changed
+-- specialties_2_relation needs changed and created
+-- specialties_2_taxonomy_scope needs changed and created
+-- specialties_2_artwork_type needs changed and created
+
+
+CREATE OR REPLACE TARGET Target_link_H_specialties_aux_LOAD USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: '
+	Artnet.dbo.SpecialtyRelation,OPS_Artnet.core.specialty_2_relation columnmap(
+	  id=SpecialtyRelationId	
+	 ,related_specialty_id=RelatedSpecialtyId
+	 ,specialty_id=SpecialtyId);
+	Artnet.dbo.SpecialtyTaxonomyScope, OPS_Artnet.core.specialty_2_taxonomy_scope columnmap(
+	  id=SpecialtyTaxonomyScopeId	
+	 ,taxonomy_scope_id=TaxonomyScopeId
+	 ,specialty_id=SpecialtyId);
+	Artnet.dbo.Specialties2MarketAlert,OPS_Artnet.core.specialties_2_market_alert columnmap(
+	  market_alert_id=Market_alert_id
+	 ,specialty_id=Specialty_id)',
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM  SQL_DBSource_link_H_specialties_aux_LOAD_OutputStream;
+
+END APPLICATION test_LOAD;
+

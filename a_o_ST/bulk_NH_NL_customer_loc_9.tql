@@ -1,0 +1,103 @@
+
+   
+--
+--
+--
+-- Application a_o_dim_NH_NL_customer_loc_LOAD
+--
+-- business.images
+--
+
+USE Migration;
+
+STOP APPLICATION a_o_dim_NH_NL_customer_loc_LOAD;
+UNDEPLOY APPLICATION a_o_dim_NH_customer_loc_NL_LOAD;
+DROP APPLICATION a_o_dim_NH_NL_customer_loc_LOAD CASCADE;
+CREATE APPLICATION a_o_dim_NH_NL_customer_loc_LOAD;
+
+
+CREATE OR REPLACE SOURCE a_o_dim_NH_NL__customer_loc_LOAD_source USING Global.DatabaseReader (
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: 'Artnet.dbo.Customer_Type;
+           Artnet.dbo.Customer_Location'
+)
+OUTPUT TO a_o_dim_NH_NL_customer_loc_LOAD;
+
+
+--
+CREATE OR REPLACE TARGET a_o_dim_core_LOAD_customer_loc_target USING Global.DatabaseWriter (
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  Tables: '
+        Artnet.dbo.Customer_Location, OPS_Artnet.core.customer_location columnmap(
+        id=Customer_location_id,
+        customer_id=Customer_id,
+        customer_type_id=Customer_Type_id,
+        sort_order=Sortorder,
+        director=Director,
+        company=Company,
+        contact_first=Contact_First,
+        contact_last=Contact_Last,
+        phone_1=Phone1,
+        phone_2=Phone2,
+        mobile=Mobile,
+        fax=Fax,
+        email=Email,
+        url=Url,
+        url_2=Url2,
+        address_1=Address1,
+        address_2=Address2,
+        city_id=City_id,
+        state_id=State_id,
+        country_id=Country_id,
+        postal_code=Postalcode,
+        hours=Hours,
+        euro_address=Euro_Address,
+        display_city_id=Display_City_id,
+        prop_url=Propurl,
+        location_name=LocationName,
+        geo_coordinates=GeoCoordinates)',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'SQLServer',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM a_o_dim_NH_NL_customer_loc_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_core_LOAD_customer_type_target USING Global.DatabaseWriter (
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  Tables: '
+        Artnet.dbo.Customer_Type, OPS_Artnet.core.customer_type columnmap(
+        id=Customer_TYpe_id,
+        customer_type_name=Customer_Type_Name)',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'SQLServer',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM a_o_dim_NH_NL_customer_loc_LOAD;
+
+
+
+END APPLICATION a_o_dim_NH_NL_customer_loc_LOAD;
+-- 

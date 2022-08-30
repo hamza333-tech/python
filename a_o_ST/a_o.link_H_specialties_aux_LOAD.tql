@@ -1,0 +1,56 @@
+
+   ---
+--- This application loads a lot of small tables that are associated with Specialties
+---
+---
+---
+---
+USE Migration;
+
+STOP APPLICATION a_o_link_H_specialties_aux_LOAD;
+UNDEPLOY APPLICATION a_o_link_H_specialties_aux_LOAD;
+DROP APPLICATION a_o_link_H_specialties_aux_LOAD CASCADE;
+CREATE APPLICATION a_o_link_H_specialties_aux_LOAD;
+
+CREATE OR REPLACE SOURCE SQL_DBSource_link_H_spec_LOAD USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  DatabaseName: 'Artnet', 
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: '
+	   Specialties2Market_Alert KeyColumns(Specialty_id, Market_Alert_id);
+	   SpecialtyTaxonomyScope KeyColumns(SpecialtyTaxonomyScopeId)'
+  ) OUTPUT TO SQL_DBSource_link_H_spec_LOAD_OutputStream;
+
+
+CREATE OR REPLACE TARGET Target_link_H_spec_LOAD USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: '
+	Artnet.dbo.SpecialtyTaxonomyScope, OPS_Artnet.core.specialty_2_taxonomy_scope columnmap(
+	  id=SpecialtyTaxonomyScopeId	
+	 ,taxonomy_scope_id=TaxonomyScopeId
+	 ,specialty_id=SpecialtyId);
+	Artnet.dbo.Specialties2Market_Alert,OPS_Artnet.core.specialties_2_market_alert columnmap(
+	  market_alert_id=Market_alert_id
+	 ,specialty_id=Specialty_id)', 
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM  SQL_DBSource_link_H_spec_LOAD_OutputStream;
+
+END APPLICATION a_o_link_H_specialties_aux_LOAD;
+

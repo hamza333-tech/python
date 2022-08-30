@@ -1,0 +1,234 @@
+
+   
+--
+-- Tables that have both change-history and language translation. Incomplete set includes so far:
+-- core.Specialties
+--
+-- This application creates a cache of Type_UserList rows that map LoginID to LoginName 
+-- and subs in LoginNames where LoginValues are used in the tables.
+-- It also has language translations that are moved out to the Translation table.
+-- 
+
+USE Migration;
+
+STOP APPLICATION a_o_fact_H_L_LOAD;
+UNDEPLOY APPLICATION a_o_fact_H_L_LOAD;
+DROP APPLICATION a_o_fact_H_L_LOAD CASCADE;
+CREATE APPLICATION a_o_fact_H_L_LOAD;
+
+CREATE OR REPLACE SOURCE SQL_DBSource_H_L USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  DatabaseName: 'Artnet', 
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: 'Specialties KeyColumns(Specialty_id)'
+)
+OUTPUT TO SQL_DBSource_H_L_OutputStream;
+
+--
+-- CQ = Continuous Query
+--
+-- Create the CQ Operation, Join the source (dbo.Specialties) table with the cache UserList table
+-- on the 22nd field of the source (ChangedBy) to the LoginId field of the cached data.
+-- And substitute the LoginName field of from the cache row into the LoginName field of the 
+-- target row.  NOTE COLUMN COUNT IS FROM 0, NOT 1.
+--
+-- Do it on this way for WAEvent, it's better
+--
+-- POSSIBLE PROBLEM HAVE I used putuserdata() and @userdatacorrectly?
+--
+CREATE OR REPLACE CQ CQ_JOIN_USERS_Specialties 
+INSERT INTO LoginCache 
+SELECT putuserdata (s,'LoginName',U.login_name)
+FROM SQL_DBSource_H_L_OutputStream s
+join UserList U
+where to_int(s.data[22]) = U.id;
+
+-- Need to add ChangeDescription to the SourceTable.
+--
+--Save Data to TARGET
+--use COLUMNMAP to sve the Original Username to a Field Called ChangedBy
+--
+-- 
+CREATE OR REPLACE TARGET SQL_Target USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false',   
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: 'Artnet.dbo.Specialties,core.specialties columnmap(
+	id=specialty_id,
+	specialty_ref_id=specialty_ref_id,
+	old_id=old_id,
+	representation=representation,
+	specialty_type_id=SpecialtyTypeId,
+	internal_name=InternalName,
+	exclude_from_auto_tagging=ExcludeFromAutoTagging,
+	period_from=PeriodFrom,
+	period_to=PeriodTo,
+	desc_guid=DescGUID,
+	sort_guid=SortGUID,
+	aliases_guid=AliasesGUID,
+	keywords_guid=KeywordsGUID)', 
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM LoginCache;
+
+CREATE OR REPLACE TARGET a_o_fact_h_l_load_CreatedRecord USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: 'Artnet.dbo.Specialties,core.history_created columnmap(
+	reference_id=specialty_id,
+	table_name=\'specialties\', 
+	created_date=CreatedDate)', 
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM LoginCache;
+
+CREATE OR REPLACE TARGET a_o_fact_h_l_load_ChangedRecord USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: 'Artnet.dbo.Specialties,core.history_changed columnmap(
+	reference_id=specialty_id,
+	table_name=\'specialties\', 
+	changed_date=ChangedDate,
+	changed_by=@userdata(LoginName),
+	change_comment=FormerValues)', 
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM LoginCache;
+
+CREATE OR REPLACE TARGET a_o_ops_fact_H_L_LOAD_target_DE1 USING Global.DatabaseWriter(
+  ConnectionRetryPolicy:'retryInterval=10, maxRetries=3',
+  Tables:'
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=DescGUID,
+                text=Desc_german,
+                language=\'DE\');
+      Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=SortGUID,
+                text=Sort_german,
+                language=\'DE\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=SortGUID,
+                text=Keywords_german,
+                language=\'DE\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=AliasesGUID,
+                text=Keywords_german,
+                language=\'DE\')',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM SQL_DBSource_H_L_OutputStream;
+
+CREATE OR REPLACE TARGET a_o_ops_fact_H_L_LOAD_target_FR1 USING Global.DatabaseWriter(
+  ConnectionRetryPolicy:'retryInterval=10, maxRetries=3',
+  Tables:'
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=DescGUID,
+                text=Desc_french,
+                language=\'FR\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=SortGUID,
+                text=Sort_french,
+                language=\'FR\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=SortGUID,
+                text=Keywords_french,
+                language=\'FR\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+                guid=AliasesGUID,
+                text=Keywords_french,
+                language=\'FR\')
+',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM SQL_DBSource_H_L_OutputStream;
+
+CREATE OR REPLACE TARGET a_o_ops_fact_H_L_LOAD_target_EN1 USING Global.DatabaseWriter(
+  ConnectionRetryPolicy:'retryInterval=10, maxRetries=3',
+  Tables:'
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+               guid=DescGUID,
+               text=Desc_english,
+               language=\'EN\');
+       Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+               guid=SortGUID,
+               text=Sort_english,
+               language=\'EN\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+               guid=SortGUID,
+               text=Keywords_english,
+               language=\'EN\');
+        Artnet.dbo.Specialties, OPS_Artnet.core.Translation columnmap(
+               guid=AliasesGUID,
+               text=Keywords_english,
+               language=\'EN\')
+',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Postgres',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM SQL_DBSource_H_L_OutputStream;
+
+END APPLICATION a_o_fact_H_L_LOAD;
+
+
+

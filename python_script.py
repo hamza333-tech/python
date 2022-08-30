@@ -3,6 +3,8 @@ import json
 from requests.exceptions import RequestException, Timeout
 import git
 import re
+import os
+
 
 
 class AuthErr(Exception):
@@ -54,7 +56,8 @@ if __name__ == '__main__':
     authToken = AuthToken('http://35.194.76.168:9080')
     auth_token = authToken.get_token('admin', 'Yn7Ccgrx2_4XDijc')
     for item in sorted_list:
-        item = item.replace("\n", "")+".tql"
+        item = item.replace("\n", "")
+        # item = re.sub(".*/","",item)
         f = open(item)
         file_data = f.read()
         application_edit("http://35.194.76.168:9080/api/v2/tungsten", f"{file_data}", auth_token) 

@@ -1,0 +1,615 @@
+
+   -- this bulk loader runs first because many things need the logins table
+-- a_o.fact_NH_NL_LOAD;
+-- a_o.dim_NH_NL_LOAD;
+-- a_o.dim_L_nationality_LOAD.tpl			
+-- a_o.dim_L_city_LOAD.tpl				
+--
+--
+-- logins
+-- salesman;
+-- marketing_source;
+-- login_type;
+-- currency;
+-- artwork_sorting;
+-- coordinators;
+-- gallery_type;
+-- status;
+-- customer_source;
+-- language;
+-- collection_type;
+-- trading_status'
+-- nationality'
+-- city
+-- country
+
+
+-- bulk_L_login_1
+--
+-- Logins plain tables with Language support
+-- Run this first to set up for history..
+-- 
+
+USE Migration;
+
+STOP APPLICATION bulk_L_login_1_LOAD ;
+UNDEPLOY APPLICATION  bulk_L_login_1_LOAD;
+DROP APPLICATION  bulk_L_login_1_LOAD CASCADE;
+CREATE APPLICATION  bulk_L_login_1_LOAD;
+
+-- FILE_INPUT a_o.fact_NH_NL_LOAD;
+
+CREATE OR REPLACE SOURCE a_o_fact_NH_NL_LOAD_source USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q', 
+  DatabaseProviderType: 'Default', 
+  FetchSize: 4, 
+  adapterName: 'DatabaseReader', 
+  QuiesceOnILCompletion: false, 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet', 
+  Username: 'striim', 
+  Tables: ' Artnet.dbo.Logins') 
+OUTPUT TO a_o_fact_NH_NL_LOAD;
+
+
+-- note, Login_id is OK in business schema tables.
+--
+CREATE OR REPLACE TARGET a_o_fact_NH_NL_LOAD_target USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Tables: 'Artnet.dbo.Logins, OPS_Artnet.business.logins columnmap(
+	id=Login_id,
+	legacy_login_id=Login_id, 
+	login_type_id=Login_Type_id, 
+	group_ind=Group_ind, 
+	last_login=Last_login, 
+	login_name=Login_name, 
+	password=Password, 
+	password_hint=Password_hint,
+	email=Email,
+	first_name=FirstName,
+	middle_initial=MiddleInitial, 
+	last_name=LastName,
+	company_name=CompanyName, 
+	last_password_change=LastPasswordChange,
+	reason_to_join_id=ReasonToJoinID,
+	member_type_id=Member_type_id, 
+	active_ind=Active_ind, 
+	customer_num=CustomerNum, 
+	is_business_purpose=isBusinessPurpose,
+	url=Url,
+	company_type_id=Company_type_id, 
+	gallery_num=GalleryNum, 
+	salesman_id=Salesman_id, 
+	coordinator_id=Coordinator_id, 
+	last_login_to_gp=LastLoginToGP, 
+	user_id=Userid)',
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM a_o_fact_NH_NL_LOAD;
+
+
+-- FILE_INPUT a_o.dim_NH_NL_LOAD;
+
+-- 
+-- Application a_o_dim_NH_NL_LOAD 
+-- Simple dimension tables with no history and no login_id FK
+-- 
+-- business.salesman
+-- business.marketing_source
+-- business.login_type
+-- core.currency
+-- core.artwork_sorting
+-- business.coordinators
+-- core.gallery_type
+-- core.status
+-- business.customer_source
+-- core.language
+-- business.collection_type
+-- business.trading_status
+--
+
+
+
+CREATE OR REPLACE SOURCE a_o_dim_NH_NL_LOAD_source USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q', 
+  DatabaseProviderType: 'Default', 
+  FetchSize: 4, 
+  adapterName: 'DatabaseReader', 
+  QuiesceOnILCompletion: false, 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet', 
+  Username: 'striim', 
+  Tables: 'Artnet.dbo.Salesman;
+	Artnet.dbo.marketing_source;
+	Artnet.dbo.login_type;
+	Artnet.dbo.currency;
+	Artnet.dbo.ArtworkSorting;
+	Artnet.dbo.coordinators;
+	Artnet.dbo.gallery_type;
+	Artnet.dbo.status;
+	Artnet.dbo.customer_source;
+	Artnet.dbo.language;
+	Artnet.dbo.collection_type;
+	Artnet.dbo.trading_status'
+ ) 
+OUTPUT TO a_o_dim_NH_NL_LOAD;
+
+
+--
+CREATE OR REPLACE TARGET a_o_business_Salesman_LOAD_target USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Tables: 'Artnet.dbo.Salesman, OPS_Artnet.business.salesman columnmap(
+	id=Salesman_id, 
+	name=SalesmanFullName, 
+	initials=SalesmanInitials, 
+	commission=Commission, 
+	login_id=Salesman_Login_Id, 
+	is_deleted=isDeleted);
+  	Artnet.dbo.Marketing_source, OPS_Artnet.business.marketing_source columnmap(
+	id=Marketing_Source_id,	
+	name=Marketing_Source_Name);
+        Artnet.dbo.Login_type, OPS_Artnet.business.login_type columnmap(
+	id=Login_type_id,
+	name=Login_type_name);
+	Artnet.dbo.Currency,OPS_Artnet.core.currency columnmap(
+	id=Currency_id, 
+	name=Currency_name, 
+	description=Description, 
+	is_active=Active_ind, 
+	symbol=Symbol);
+	Artnet.dbo.ArtworkSorting,OPS_Artnet.core.artwork_sorting columnmap(
+	id=ArtworkSortingId,
+	name=Name);
+	Artnet.dbo.Coordinators,OPS_Artnet.business.coordinators columnmap(
+	id=coordinator_id,
+        login_id=coordinator_login_id, 
+	name=Coordinator_name, 
+	initials=coordinator_initials,
+        commission=Commission, 
+	picture=Picture, 
+	occupation=Occupation, 
+	phone=Phone, 
+	is_deleted=isDeleted);
+	Artnet.dbo.gallery_type, OPS_Artnet.core.gallery_type columnmap(
+	id=gallery_type_id, 
+	name=gallery_type_name);
+	Artnet.dbo.Status, OPS_Artnet.core.status columnmap(
+	id=status_id, 
+	name=status_name);
+	Artnet.dbo.Customer_source, OPS_Artnet.business.customer_source columnmap(
+	id=Customer_source_id,
+	name=Customer_source_name);
+	Artnet.dbo.Language, OPS_Artnet.core.language columnmap(
+	id=Language_id,
+	name=Language_name);
+	Artnet.dbo.Collection_Type, OPS_Artnet.core.collection_type columnmap(
+	id=collection_type_id,
+	name=collection_type_name);
+	Artnet.dbo.Trading_Status, OPS_Artnet.business.trading_status columnmap(
+	id=Trading_status_id,
+	name=Trading_status_name)',
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM a_o_dim_NH_NL_LOAD;
+
+
+-- FILE_INPUT a_o.dim_L_nationality_LOAD.tpl			
+
+CREATE OR REPLACE SOURCE a_o_dim_L_nationality_LOAD_source USING Global.DatabaseReader(
+  Password: '7XNsbmM1tYaeA5Q', 
+  DatabaseProviderType: 'Default', 
+  FetchSize: 4, 
+  adapterName: 'DatabaseReader', 
+  QuiesceOnILCompletion: false, 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet', 
+  Username: 'striim', 
+  Tables: ' Artnet.dbo.Nationality'
+) 
+OUTPUT TO output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_LOAD_SS USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter',  
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.nationality columnmap(
+                id=Nationality_id,
+                name_guid=NameGUID,
+                aliases_guid=AliasesGUID)'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_nationality_trn_de_name USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+                guid=NameGUID,
+                text=Nationality_name_DE,
+                language=\'DE\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_nationality_trn_de_aliases USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+                guid=AliasesGUID,
+                text=Nationality_aliases_DE,
+                language=\'DE\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_trn_en_name USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+           guid=NameGUID,
+           text=Nationality_name_US,
+           language= \'EN\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_trn_en_aliases USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+           guid=AliasesGUID,
+           text=Nationality_aliases_US,
+           language= \'EN\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_trn_fr_name USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+        guid=NameGUID,
+        text=Nationality_name_FR,
+        language= \'FR\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+CREATE OR REPLACE TARGET a_o_dim_L_nationality_trn_fr_aliases USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.Nationality, OPS_Artnet.core.translation columnmap(
+        guid=AliasesGUID,
+        text=Nationality_aliases_FR,
+        language= \'FR\')'
+)
+INPUT FROM output_a_o_dim_L_nationality_LOAD_x;
+
+
+-- FILE_INPUT a_o.dim_L_city_LOAD.tpl				
+
+CREATE OR REPLACE SOURCE a_o_dim_L_LOAD_source USING Global.DatabaseReader(
+  Password: '7XNsbmM1tYaeA5Q', 
+  DatabaseProviderType: 'Default', 
+  FetchSize: 4, 
+  adapterName: 'DatabaseReader', 
+  QuiesceOnILCompletion: false, 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet', 
+  Username: 'striim', 
+  Tables: 'Artnet.dbo.City'
+  ) 
+OUTPUT TO output_a_o_dim_L_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_SS USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter',  
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.city columnmap(
+		id=City_id,
+		country_id=Country_id,
+		state_id=State_id,
+		name_guid=NameGUID,
+		aliases_guid=AliasesGUID,
+		city_seo_guid=CitySeoGUID)'
+)
+INPUT FROM output_a_o_dim_L_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_name_de USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+	guid=NameGuid, 
+	text=City_name_DE, 
+	language=\'DE\')'
+)
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_name_us USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+        guid=NameGUID,
+        text=City_name_US,
+        language= \'EN\')'
+)
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_name_fr USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+        guid=NameGUID,
+        text=City_name_FR,
+        language=\'FR\')'
+)
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_aliases_de USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+	guid=AliasesGUID, 
+	text=City_aliases_DE, 
+	language=\'DE\')'
+) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_aliases_fr USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+        guid=AliasesGUID,
+        text=City_aliases_FR,
+        language=\'FR\')'
+) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_aliases_en USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter', 
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+        guid=AliasesGUID,
+        text=City_aliases_US,
+        language=\'EN\')'
+) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_seo_en USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter',
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+	guid=CitySeoGUID, 
+	text=CitySeoEn, 
+	language=\'EN\')'
+ ) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_seo_fr USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter',
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+	guid=CitySeoGUID, 
+	text=CitySeoFr, 
+	language=\'FR\')'
+ ) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+CREATE OR REPLACE TARGET a_o_dim_L_LOAD_city_seo_de USING Global.DatabaseWriter(
+  Password_encrypted: 'false', 
+  CheckPointTable: 'CHKPOINT', 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Password: 'artnetstriim89', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default', 
+  PreserveSourceTransactionBoundary: 'false', 
+  adapterName: 'DatabaseWriter',
+  Tables:'Artnet.dbo.City, OPS_Artnet.core.translation columnmap(
+	guid=CitySeoGUID, 
+	text=CitySeoDe, 
+	language=\'DE\')'
+ ) 
+INPUT FROM output_a_o_dim_L_LOAD;
+
+
+
+END APPLICATION  bulk_L_login_1_LOAD;

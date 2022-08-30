@@ -1,0 +1,71 @@
+
+   ---
+---
+
+
+-- core.specialty_2_taxonomy_scope
+-- core.specialty_type;
+
+---
+USE Migration;
+-- bulk_H_specialty_type_5.tpl
+
+STOP APPLICATION  bulk_H_5_specialty_type_LOAD;
+UNDEPLOY APPLICATION bulk_H_5_specialty_type_LOAD;
+DROP APPLICATION bulk_H_5_specialty_type_LOAD CASCADE;
+CREATE APPLICATION bulk_H_5_specialty_type_LOAD;
+
+
+CREATE OR REPLACE SOURCE SQL_DBSource_H_specialty_type_LOAD USING Global.DatabaseReader ( 
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  DatabaseName: 'Artnet', 
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: 'Artnet.dbo.SpecialtyTaxonomyScope KeyColumns(SpecialtyTaxonomyScopeId);
+	   Artnet.dbo.SpecialtyType KeyColumns(SpecialtyTypeId)'
+)
+OUTPUT TO SQL_DBSource_H_specialty_type_LOAD_OutputStream;
+
+-- specialty_type needs changed and created
+
+CREATE OR REPLACE TARGET Target_H_specialty_type_x_LOAD USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3', 
+  Password: 'artnetstriim89', 
+  CheckPointTable: 'CHKPOINT', 
+  Password_encrypted: 'false', 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default',
+  CDDLAction: 'Process', 
+  Username: 'postgres', 
+  StatementCacheSize: '50', 
+  CommitPolicy: 'EventCount:10000,Interval:5', 
+  Tables: 'Artnet.dbo.SpecialtyType,OPS_Artnet.core.specialty_type columnmap(
+	   id = SpecialtyTypeId
+	  ,name = SpecialtyTypeName 
+	  ,hierarchy_depth_limit = HeirarchyDepthLimit 
+	  ,is_active = isActive 
+	  ,is_mergeable = isMergeable 
+	  ,is_sortable = isSortable 
+	  ,is_artwork_type_applicable = isArtworkTypeApplicable 
+	  ,is_taxonomy_scope_applicable = isTaxonomyScopeApplicable 
+	  ,is_period_applicable = isPeriodApplicable 
+	  ,is_related_specialty_applicable = isRelatedSpecialtyApplicable 
+	  ,is_deletable = isDeletable 
+	  ,related_specialty_type = RelatedSpecialtyType 
+	  ,exclude_from_auto_tagging_applicable = ExcludeFromAutoTaggingApplicable); 
+	Artnet.dbo.SpecialtyTaxonomyScope, OPS_Artnet.core.specialty_2_taxonomy_scope columnmap(
+	  id=SpecialtyTaxonomyScopeId	
+	 ,taxonomy_scope_id=TaxonomyScopeId
+	 ,specialty_id=SpecialtyId)', 
+  PreserveSourceTransactionBoundary: 'false', 
+  BatchPolicy: 'EventCount:10000,Interval:5', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM  SQL_DBSource_H_specialty_type_LOAD_OutputStream;
+
+END APPLICATION bulk_H_5_specialty_type_LOAD;
+

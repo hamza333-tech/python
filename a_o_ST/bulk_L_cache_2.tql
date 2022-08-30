@@ -1,0 +1,73 @@
+
+   -- this bulk loader runs seond to set up the caches. 
+--
+--
+-- bulk_L_cache_2
+--- a_o.cache_login_local.tpl
+--- a_o.cache_login_external.tpl		
+
+USE Migration;
+
+STOP APPLICATION bulk_L_cache_2_LOAD; 
+UNDEPLOY APPLICATION bulk_L_cache_2_LOAD;
+DROP APPLICATION bulk_L_cache_2_LOAD CASCADE;
+CREATE APPLICATION bulk_L_cache_2_LOAD;
+
+-- FILE_INPUT a_o.cache_login_external.tpl		
+
+-- Create a TYPE to hold CACHED Data
+-- This is identical with the datastructure for the internal cache but renamed
+-- to avoid confusion.
+--
+CREATE TYPE Type_UserList_External (
+ id int KEY,
+ login_name java.lang.String
+);
+
+CREATE EXTERNAL CACHE UserListExternal (
+  Username: 'postgres', 
+  Password: 'artnetstriim89',
+  Password_encrypted: 'false',
+  FetchSize: 1, 
+  SkipInvalid: false,
+  connectionRetryPolicy: 'timeOut=30, retryInterval=10, maxRetries=3',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default',
+  KeyToMap: 'id',
+  Table: 'OPS_Artnet.business.logins',
+  AdapterName: 'DatabaseReader',
+  Columns: 'id,login_name' 
+)
+OF Type_UserList_External;
+
+
+-- FILE_INPUT a_o.cache_login_local.tpl
+
+
+CREATE TYPE Type_UserList (
+ id int KEY,
+ login_name java.lang.String
+);
+
+--
+-- CREATE the cache table UserList of Type_UserList objects from a SQL Statement and REFRESH every n hours
+-- Note that it has a "keytomap" that is the ChangedBy field of the Type.
+--
+CREATE OR REPLACE CACHE UserList USING Global.DatabaseReader ( 
+  DatabaseProviderType: 'Default', 
+  FetchSize: 4, 
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'Default',
+  Query: 'SELECT id, login_name FROM business.logins', 
+  Password: 'artnetstriim89', 
+  Username: 'postgres', 
+  QuiesceOnILCompletion: false, 
+  Password_encrypted: 'false' ) 
+QUERY ( 
+  Keytomap: 'id',
+  Skipinvalid: 'false',
+  RefreshInterval: '1 HOUR' ) 
+OF Type_UserList;
+
+
+END APPLICATION bulk_L_cache_2_LOAD;

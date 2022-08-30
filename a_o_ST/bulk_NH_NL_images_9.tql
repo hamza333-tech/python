@@ -1,0 +1,57 @@
+
+   
+--
+--
+--
+-- Application a_o_dim_NH_NL_images_LOAD
+--
+-- business.images
+--
+
+USE Migration;
+
+STOP APPLICATION a_o_dim_NH_NL_images_LOAD;
+UNDEPLOY APPLICATION a_o_dim_NH_images_NL_LOAD;
+DROP APPLICATION a_o_dim_NH_NL_images_LOAD CASCADE;
+CREATE APPLICATION a_o_dim_NH_NL_images_LOAD;
+
+
+CREATE OR REPLACE SOURCE a_o_dim_NH_NL__imagesLOAD_source USING Global.DatabaseReader (
+  Password: '7XNsbmM1tYaeA5Q',
+  DatabaseProviderType: 'Default',
+  FetchSize: 4,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: false,
+  Password_encrypted: 'false',
+  ConnectionURL: 'jdbc:sqlserver://172.25.9.6:1433;DatabaseName=Artnet',
+  Username: 'striim',
+  Tables: '
+        Artnet.dbo.Images'
+)
+OUTPUT TO a_o_dim_NH_NL_images_LOAD;
+
+
+--
+CREATE OR REPLACE TARGET a_o_dim_core_salesman_LOAD_target USING Global.DatabaseWriter (
+  ConnectionRetryPolicy: 'retryInterval=10, maxRetries=3',
+  Tables: '
+        Artnet.dbo.Images, OPS_Artnet.core.images columnmap(
+        id=Image_id,
+        artwork_id=Artwork_id,
+        sort_order=Sortorder)',
+  CheckPointTable: 'CHKPOINT',
+  Password_encrypted: 'false',
+  CDDLAction: 'Process',
+  BatchPolicy: 'EventCount:10000,Interval:5',
+  Username: 'postgres',
+  StatementCacheSize: '50',
+  CommitPolicy: 'EventCount:10000,Interval:5',
+  Password: 'artnetstriim89',
+  ConnectionURL: 'jdbc:postgresql://34.150.173.116:5432/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: 'SQLServer',
+  PreserveSourceTransactionBoundary: 'false',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM a_o_dim_NH_NL_images_LOAD;
+
+END APPLICATION a_o_dim_NH_NL_images_LOAD;
+-- 
