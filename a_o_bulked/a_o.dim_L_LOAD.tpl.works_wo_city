@@ -1,0 +1,282 @@
+
+--
+-- 
+-- Application artnet_ops_dim_L_LOAD 
+-- Simple dimension tables with language translations but no history 
+-- dbo.SaleStatus
+-- dbo.Nationality
+-- dbo.Year_modifier
+-- dbo.Price_phrase
+-- dbo.Price_status
+--
+
+USE Migration;
+
+STOP APPLICATION artnet_ops_dim_L_LOAD;
+UNDEPLOY APPLICATION artnet_ops_dim_L_LOAD;
+DROP APPLICATION artnet_ops_dim_L_LOAD CASCADE;
+CREATE APPLICATION artnet_ops_dim_L_LOAD;
+
+
+CREATE OR REPLACE SOURCE artnet_ops_dim_L_LOAD_source USING Global.DatabaseReader ( 
+  Password: '__SOURCE_PWD__', 
+  DatabaseProviderType: 'Default', 
+  FetchSize: __FETCH_SZ__, 
+  adapterName: 'DatabaseReader', 
+  QuiesceOnILCompletion: __QUIESCE_ON_IL_COMPLT__, 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:sqlserver://__SOURCE_IP_PORT__;DatabaseName=__SOURCE_DB__', 
+  Username: '__SOURCE_UNAME__', 
+  Tables: '__SOURCE_DB__.dbo.SaleStatus;
+	   __SOURCE_DB__.dbo.Nationality;
+	   __SOURCE_DB__.dbo.Year_Modifier;
+	   __SOURCE_DB__.dbo.PricePhrase;
+	   __SOURCE_DB__.dbo.PriceStatus 
+	') 
+OUTPUT TO output_artnet_ops_dim_L_LOAD;
+
+-- Base Table
+-- SaleStatus
+-- Nationality
+-- YearModifier
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_targetSS_SS USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+	__SOURCE_DB__.dbo.SaleStatus,__TARGET_DB__.business.SaleStatus columnmap(
+		SaleStatusID=SaleStatus_id,
+		GUID=GUID);
+	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Nationality columnmap(
+		NationalityID=Nationality_id, 
+		NameGUID=NameGUID, 
+		AliasesGUID=AliasesGUID);
+	__SOURCE_DB__.dbo.Year_Modifier, __TARGET_DB__.core.YearModifier columnmap(
+		YearModifierId=Year_Modifier_Id, 
+		Name=Name,
+		Type=Type,
+		SortOrder=sortorder,
+		GUID=NameGUID);
+	__SOURCE_DB__.dbo.PricePhrase, __TARGET_DB__.core.PricePhrase columnmap(
+		PricePhraseId=PricePhrase_id,
+		PricePhraseGUID=PricePhraseGuid);		
+	__SOURCE_DB__.dbo.PriceStatus, __TARGET_DB__.core.PriceStatus columnmap(
+		PriceStatusId=PriceStatus_id,
+		PriceStatusGUID=PriceStatusGUID)		
+	',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+
+-- Translation DE 1
+-- SaleStatus
+-- Nationality
+-- YearModifier
+-- PricePhrase
+-- PriceStatus
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_DE1 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+	__SOURCE_DB__.dbo.SaleStatus, __TARGET_DB__.core.Translation columnmap(
+		GUID=GUID,
+		Text=SaleStatus_name_de,
+		Language=\'DE\');
+ 	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+		GUID=NameGUID, 
+		Text=Nationality_name_DE, 
+		Language=\'DE\');
+ 	__SOURCE_DB__.dbo.Year_Modifier, __TARGET_DB__.core.Translation columnmap(
+		GUID=NameGUID, 
+		Text=DisplayName_de, 
+		Language=\'DE\');
+ 	__SOURCE_DB__.dbo.PricePhrase, __TARGET_DB__.core.Translation columnmap(
+		GUID=PricePhraseGUID, 
+		Text=PricePhrase_Desc_de, 
+		Language=\'DE\');
+ 	__SOURCE_DB__.dbo.PriceStatus, __TARGET_DB__.core.Translation columnmap(
+		GUID=PriceStatusGUID, 
+		Text=PriceStatus_Desc_de, 
+		Language=\'DE\')
+',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+-- Translation EN 1
+-- SaleStatus
+-- Nationality
+-- YearModifier
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_EN1 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+	__SOURCE_DB__.dbo.SaleStatus,__TARGET_DB__.core.Translation columnmap(
+	GUID=GUID,
+	Text=SaleStatus_Name,
+	Language=\'EN\');
+	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+	GUID=NameGUID, 
+	Text=Nationality_name_US, 
+	Language= \'EN\');
+	__SOURCE_DB__.dbo.Year_Modifier, __TARGET_DB__.core.Translation columnmap(
+	GUID=NameGUID, 
+	Text=DisplayName_en, 
+	Language= \'EN\');
+	__SOURCE_DB__.dbo.PricePhrase, __TARGET_DB__.core.Translation columnmap(
+	GUID=PricePhraseGUID, 
+	Text=PricePhrase_Desc, 
+	Language= \'EN\');
+	__SOURCE_DB__.dbo.PriceStatus, __TARGET_DB__.core.Translation columnmap(
+	GUID=PriceStatusGUID, 
+	Text=PriceStatus_Desc, 
+	Language= \'EN\')
+',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+-- Translation FR 1
+-- SaleStatus
+-- Nationality
+-- YearModifier
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_FR1 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+	__SOURCE_DB__.dbo.SaleStatus,__TARGET_DB__.core.Translation columnmap(
+	Text=SaleStatus_name_fr,
+	GUID=GUID,
+	Language=\'FR\');
+	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+	GUID=NameGUID, 
+	Text=Nationality_name_FR,
+	Language=\'FR\');
+	__SOURCE_DB__.dbo.Year_Modifier, __TARGET_DB__.core.Translation columnmap(
+	GUID=NameGUID, 
+	Text=DisplayName_fr,
+	Language=\'FR\');
+	__SOURCE_DB__.dbo.PricePhrase, __TARGET_DB__.core.Translation columnmap(
+	GUID=PricePhraseGUID, 
+	Text=PricePhrase_Desc_fr,
+	Language=\'FR\');
+	__SOURCE_DB__.dbo.PriceStatus, __TARGET_DB__.core.Translation columnmap(
+	GUID=PriceStatusGUID, 
+	Text=PriceStatus_Desc_fr,
+	Language=\'FR\')
+	',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+
+-- Translation DE 2
+-- Nationality
+--
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_DE2 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+ 	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+	GUID=NameGUID, 
+	Text=Nationality_aliases_DE, 
+	Language=\'DE\')',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+-- Translation EN 2
+-- Nationality
+--
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_EN2 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:' 
+	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+	GUID=AliasesGUID, 
+	Text=Nationality_aliases_US, 
+	Language=\'EN\')',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+-- Translation FR 2
+-- Nationality
+--
+CREATE OR REPLACE TARGET artnet_ops_dim_L_LOAD_target_FR2 USING Global.DatabaseWriter( 
+  ConnectionRetryPolicy:'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Tables:'
+	__SOURCE_DB__.dbo.Nationality, __TARGET_DB__.core.Translation columnmap(
+	GUID=AliasesGUID, 
+	Text=Nationality_aliases_FR, 
+	Language=\'FR\')',
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  CDDLAction: 'Process', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Password: '__TARGET_PWD__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;DatabaseName=__TARGET_DB__', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM output_artnet_ops_dim_L_LOAD;
+
+
+END APPLICATION artnet_ops_dim_L_LOAD;

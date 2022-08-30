@@ -1,0 +1,197 @@
+USE Migration;
+
+STOP APPLICATION artnet_ops_Fact_H_LOAD;
+UNDEPLOY APPLICATION artnet_ops_Fact_H_LOAD;
+DROP APPLICATION artnet_ops_Fact_H_LOAD CASCADE;
+CREATE APPLICATION artnet_ops_Fact_H_LOAD;
+
+CREATE OR REPLACE SOURCE SQL_DBSource_Fact_H_artwork USING Global.DatabaseReader ( 
+  Password: '__SOURCE_PWD__',
+  DatabaseProviderType: 'Default',
+  DatabaseName: '__SOURCE_DB__', 
+  FetchSize: __FETCH_SZ__,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: __QUIESCE_ON_IL_COMPLT__,
+  Password_encrypted: '__PWD_ENCRYPT__',
+  ConnectionURL: 'jdbc:sqlserver://__SOURCE_IP_PORT__;DatabaseName=__SOURCE_DB__',
+  Username: '__SOURCE_UNAME__',
+  Tables: '__SOURCE_DB__.dbo.Artwork KeyColumns(Artwork_id)'
+)
+OUTPUT TO SQL_DBSource_Fact_H_artwork_OutputStream;
+
+
+--
+-- CQ = Continuous Query
+--
+-- Slightly tricky: Note we do two left outer joins here to get multiple translations of
+-- LoginId to LoginName.
+--
+
+CREATE OR REPLACE CQ CQ_JOIN_USERS_gallery_ChangedBy 
+INSERT INTO ArtworkLoginCache
+SELECT putuserdata(s,'CreatedUser',R.LoginName, 'ChangedUser', H.LoginName)
+FROM SQL_DBSource_Fact_H_artwork_OutputStream s 
+LEFT JOIN UserList R on to_int(s.data[38]) = R.LoginID
+LEFT JOIN UserList H on to_int(s.data[40]) = H.LoginID;
+
+
+CREATE OR REPLACE TARGET SQL_Target_Fact_H_artwork USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__', 
+  Password: '__TARGET_PWD__', 
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;databaseName=__TARGET_DB__', 
+  CDDLAction: 'Process', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Tables: '__SOURCE_DB__.dbo.Artwork,core.Artwork columnmap(
+	 ArtworkID=Artwork_id
+	,isDeleted=isDeleted
+	,ArtworkName=Artwork_Name
+	,WorkyearFrom=Workyear_from
+	,WorkyearTo=Workyear_to
+	,Height=Height
+	,Width=Width
+	,Depth=Depth
+	,Edition=Edition 
+	,ArtworkTypeID=Artwork_type_Id
+	,Description=Description
+	,MeasurementType=MeasurementType
+	,ArtworkCount=Artwork_count
+	,ArtistModifierID=Artist_modifier_id
+	,Copyright=Copyright
+	,WorkyearFromModifierID=Workyear_from_modifier_id
+	,WorkyearToModifierID=Workyear_to_modifier_id
+	,WorkyearFromAddition=Workyear_from_addition
+	,WorkyearToAddition=Workyear_to_addition
+	,WorkyearModifier=Workyear_modifier
+	,AfterToModifier=after_to_modifier
+	,AfterFromModifier=after_from_modifier
+	,Photo=photo
+	,Provenance=provenance
+	,Exhibition=exhibition
+	,Literature=literature
+	,OtherLable=otherLable
+	,Other=other
+	,WorkyearModifierTo=workyear_modifier_to
+	,MonthFrom=monthFrom
+	,MonthTo=monthTo
+	,DayFrom=dayFrom
+	,DayTo=dayTo
+	,Diameter=Diameter
+	,IsInstallationView=isInstallationView
+	,IsDimensionsVary=isDimensionsVary
+  )', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM SQL_DBSource_Fact_H_artwork_OutputStream;
+
+
+-- Produces  Exception occurred while binding data  EVEN IF THE ONLY FILED IS ArtworkID.
+--
+CREATE OR REPLACE TARGET SQL_Target_Fact_H_artworkgallery USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__', 
+  Password: '__TARGET_PWD__', 
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;databaseName=__TARGET_DB__', 
+  CDDLAction: 'Process', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Tables: '__SOURCE_DB__.dbo.Artwork,core.ArtworkGallery columnmap(
+         ArtworkID=Artwork_id
+        ,StatusId=Status_id     
+        ,GalleryId=Gallery_id
+	,Price=Price
+	,CurrencyId=Currency_id
+	,SaleStatusId=SaleStatus_id
+	,ArtworkTypeId=Artwork_type_id
+	,TradingStatusId=Trading_status_id
+	,Creditline=Creditline
+	,PriceUSD=Price_USD
+	,PriceTo=Price_to
+	,PriceToUSD=Price_to_usd
+	,isExcludeFromAllArtworks=isExcludeFromAllArtworks
+	,RelistedDate=RelistedDate
+	,CurrencyCode=CurrencyCode
+  )', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM SQL_DBSource_Fact_H_artwork_OutputStream;
+	
+-- REMOVED THIS FIELD FOR DIAGNOSTIC REAONS:  ShowHome = ShowHome
+CREATE OR REPLACE TARGET SQL_Target_Fact_H_artworkDisplay USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__', 
+  Password: '__TARGET_PWD__', 
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;databaseName=__TARGET_DB__', 
+  CDDLAction: 'Process', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Tables: '__SOURCE_DB__.dbo.Artwork,core.ArtworkDisplay columnmap(
+         ArtworkDisplayID=Artwork_id
+	,SortOrder = SortOrder
+	,Photo = Photo
+	,isExcludeFromAllArtworks=isExcludeFromAllArtworks
+	,isInstallationView=isInstallationView
+  )', 
+  DatabaseProviderType: 'SQLServer', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM SQL_DBSource_Fact_H_artwork_OutputStream;
+	
+CREATE OR REPLACE TARGET CreatedRecordArtwork USING Global.DatabaseWriter (
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Password: '__TARGET_PWD__',
+  CheckPointTable: '__CHKPOINT__',
+  Password_encrypted: '__PWD_ENCRYPT__',
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;databaseName=__TARGET_DB__',
+  CDDLAction: 'Process',
+  Username: '__TARGET_UNAME__',
+  StatementCacheSize: '__STMT_CACHE_SIZE__',
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__',
+  Tables: '__SOURCE_DB__.dbo.Artwork,core.Created columnmap(
+        Reference=Artwork_id,
+        Table=\'Artwork\',
+	CreatedBy=@userdata(CreatedUser),
+	CreatedDate=Created_Date)',
+  DatabaseProviderType: 'SQLServer',
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__',
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__',
+  adapterName: 'DatabaseWriter' )
+INPUT FROM ArtworkLoginCache;
+
+
+CREATE OR REPLACE TARGET ChangedRecordArtwork USING Global.DatabaseWriter (
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__',
+  Password: '__TARGET_PWD__',
+  CheckPointTable: '__CHKPOINT__',
+  Password_encrypted: '__PWD_ENCRYPT__',
+  ConnectionURL: 'jdbc:sqlserver://__TARGET_IP_PORT__;databaseName=__TARGET_DB__',
+  CDDLAction: 'Process',
+  Username: '__TARGET_UNAME__',
+  StatementCacheSize: '__STMT_CACHE_SIZE__',
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__',
+  Tables: '__SOURCE_DB__.dbo.Artwork,core.Changed columnmap(
+        Reference=Artwork_id,
+        Table=\'Artwork\',
+	ChangedBy=@userdata(ChangedUser),
+	ChangedDate=Changed_Date,
+        FormerValues=FormerValues)',
+  DatabaseProviderType: 'SQLServer',
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__',
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__',
+  adapterName: 'DatabaseWriter')
+INPUT FROM ArtworkLoginCache;
+
+END APPLICATION artnet_ops_Fact_H_LOAD;
+

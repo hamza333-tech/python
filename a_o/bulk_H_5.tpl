@@ -1,0 +1,208 @@
+---
+--- This application loads a lot of small tables that are associated with Specialties
+--- runs in about four minutes without specialties_2_lot
+---
+--- a_o.link_H_specialties_aux_LOAD.tpl
+---
+---
+
+
+-- specialty_2_relation
+-- specialties_2_market_alert
+-- specialties_2_gallery
+-- specialties_2_event
+-- specialties_2_artwork
+-- specialties_2_artist
+-- specialty_2_taxonomy_scope
+-- specialties_2_artwork_type
+-- specialties_2_collection
+-- specialties_2_lot 
+-- artist_2_artwork
+-- lot_artwork_type
+-- core.specialty_type;
+-- core.category;
+-- core.category_artwork_type;
+
+---
+USE Migration;
+-- bulk_H_5_specialties_link
+
+STOP APPLICATION  bulk_H_5_specialties_link_LOAD;
+UNDEPLOY APPLICATION bulk_H_5_specialties_link_LOAD;
+DROP APPLICATION bulk_H_5_specialties_link_LOAD CASCADE;
+CREATE APPLICATION bulk_H_5_specialties_link_LOAD;
+  
+
+
+-- FILE_INPUT a_o.link_H_specialties_aux_LOAD.tpl
+
+CREATE OR REPLACE SOURCE SQL_DBSource_link_H_specialties_aux_LOAD USING Global.DatabaseReader ( 
+  Password: '__SOURCE_PWD__',
+  DatabaseProviderType: 'Default',
+  DatabaseName: '__SOURCE_DB__', 
+  FetchSize: __FETCH_SZ__,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: __QUIESCE_ON_IL_COMPLT__,
+  Password_encrypted: '__PWD_ENCRYPT__',
+  ConnectionURL: 'jdbc:sqlserver://__SOURCE_IP_PORT__;DatabaseName=__SOURCE_DB__',
+  Username: '__SOURCE_UNAME__',
+  Tables: '
+	   __SOURCE_DB__.dbo.SpecialtyRelation KeyColumns(SpecialtyRelationId);
+	   __SOURCE_DB__.dbo.Specialties2Market_Alert KeyColumns(Specialty_id, Market_Alert_id);
+	   __SOURCE_DB__.dbo.Specialties2Gallery KeyColumns(Specialties2GalleryID);
+	   __SOURCE_DB__.dbo.Specialties2Event KeyColumns(Specialt2EventID);
+	   __SOURCE_DB__.dbo.Specialties2Artwork KeyColumns(Specialties2ArtworkId);
+	   __SOURCE_DB__.dbo.Specialties2Artist KeyColumns(Specialties2ArtistID);
+	   __SOURCE_DB__.dbo.SpecialtyTaxonomyScope KeyColumns(SpecialtyTaxonomyScopeId);
+	   __SOURCE_DB__.dbo.SpecialtyArtworkType KeyColumns(SpecialtyArtworkTypeID);
+	   __SOURCE_DB__.dbo.Specialties2Collection KeyColumns(s2c_id);
+	   __SOURCE_DB__.dbo.Artist_Artwork KeyColumns(Artist_id, Artwork_id);
+	   __SOURCE_DB__.dbo.LotArtworkType KeyColumns(LotId, ArtworkTypeId);
+	   __SOURCE_DB__.dbo.CategoryArtworkType KeyColumns(CategoryId, ArtworkTypeId);
+	   __SOURCE_DB__.dbo.Category KeyColumns(CategoryId);
+	   __SOURCE_DB__.dbo.SpecialtyType KeyColumns(SpecialtyTypeId)'
+)
+OUTPUT TO SQL_DBSource_link_H_specialties_aux_LOAD_OutputStream;
+
+
+-- consider putting created date in the tables to save pointless entries.
+--
+-- specialties_2_market_alert needs changed
+-- specialties_2_gallery needs created, changed
+-- specialties_2_event needs created, changed
+-- specialties_2_artwork needs changed
+-- specialties_2_artist needs changed
+-- specialties_2_collection needs created, changed
+-- specialties_2_relation needs changed and created
+-- specialty needs changed and created
+-- specialties_2_artwork_type needs changed and created
+-- specialty_type needs changed and created
+
+
+CREATE OR REPLACE TARGET Target_link_H_specialties_aux_LOAD USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__', 
+  Password: '__TARGET_PWD__', 
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:__TARGET_DB_VEND__://__TARGET_IP_PORT__/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: '__DATABASE_PROVIDER_TYPE__',
+  CDDLAction: 'Process', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Tables: '__SOURCE_DB__.dbo.SpecialtyType,__TARGET_DB__.core.specialty_type columnmap(
+	   id = SpecialtyTypeId
+	  ,name = SpecialtyTypeName 
+	  ,hierarchy_depth_limit = HeirarchyDepthLimit 
+	  ,is_active = isActive 
+	  ,is_mergeable = isMergeable 
+	  ,is_sortable = isSortable 
+	  ,is_artwork_type_applicable = isArtworkTypeApplicable 
+	  ,is_taxonomy_scope_applicable = isTaxonomyScopeApplicable 
+	  ,is_period_applicable = isPeriodApplicable 
+	  ,is_related_specialty_applicable = isRelatedSpecialtyApplicable 
+	  ,is_deletable = isDeletable 
+	  ,related_specialty_type = RelatedSpecialtyType 
+	  ,exclude_from_auto_tagging_applicable = ExcludeFromAutoTaggingApplicable); 
+	__SOURCE_DB__.dbo.Category, __TARGET_DB__.core.category columnmap(
+	  id=CategoryId	
+	 ,internal_name=InternalName
+	 ,period_from=PeriodFrom
+	 ,period_to=PeriodTo);
+	__SOURCE_DB__.dbo.CategoryArtworkType, __TARGET_DB__.core.category_artwork_type columnmap(
+	  category_id=CategoryId	
+	 ,artwork_type_id=ArtworkTypeId);
+	__SOURCE_DB__.dbo.SpecialtyArtworkType, __TARGET_DB__.core.specialty_2_artwork_type columnmap(
+	  id=SpecialtyArtworkTypeId	
+	 ,artwork_type_id=ArtworkTypeId
+	 ,specialty_id=SpecialtyId);
+	__SOURCE_DB__.dbo.SpecialtyTaxonomyScope, __TARGET_DB__.core.specialty_2_taxonomy_scope columnmap(
+	  id=SpecialtyTaxonomyScopeId	
+	 ,taxonomy_scope_id=TaxonomyScopeId
+	 ,specialty_id=SpecialtyId);
+        __SOURCE_DB__.dbo.SpecialtyRelation,__TARGET_DB__.core.specialty_2_relation columnmap(
+          id=SpecialtyRelationId
+         ,related_specialty_id=RelatedSpecialtyId
+         ,specialty_id=SpecialtyId);
+	__SOURCE_DB__.dbo.Specialties2Market_Alert,__TARGET_DB__.core.specialties_2_market_alert columnmap(
+	  market_alert_id=Market_alert_id
+	 ,specialty_id=Specialty_id);
+	__SOURCE_DB__.dbo.Specialties2Gallery,__TARGET_DB__.core.specialties_2_gallery columnmap(
+	 id=Specialties2GalleryID
+	 ,gallery_id=Gallery_id
+	 ,specialty_id=Specialty_id);
+	__SOURCE_DB__.dbo.Specialties2Event,__TARGET_DB__.core.specialties_2_event columnmap(
+	  id=Specialties2EventID
+	 ,event_id=Event_id
+	 ,specialty_id=Specialty_id);
+	__SOURCE_DB__.dbo.Specialties2Artwork,__TARGET_DB__.core.specialties_2_artwork columnmap(
+	 id=Specialties2ArtworkId
+	,artwork_id=Artwork_id
+	,specialty_id=Specialty_id
+	,is_public=isPublic
+	,is_auto_tagged=isAutoTagged);
+	__SOURCE_DB__.dbo.Specialties2Artist,__TARGET_DB__.core.specialties_2_artist columnmap(
+	 id=Specialties2ArtistId
+	,artist_id=artist_id
+	,specialty_id=Specialty_id
+	,is_inheritable=isInheritable);
+	__SOURCE_DB__.dbo.Specialties2Collection,__TARGET_DB__.core.specialties_2_collection columnmap(
+	 id=s2c_id
+	,collection_id=Collection_id
+	,specialty_id=Specialty_id);
+	__SOURCE_DB__.dbo.Artist_Artwork,__TARGET_DB__.core.artist_2_artwork columnmap(
+	 artist_id = Artist_id
+	,artist_modifier_id = Artist_Modifier_id
+	,artwork_id = Artwork_id
+	,image_sort_order = ImageSortOrder);
+	__SOURCE_DB__.dbo.LotArtworkType,__TARGET_DB__.core.lot_2_artwork_type columnmap(
+	lot_id = LotId
+	,artwork_type_id = ArtworkTypeId)', 
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM  SQL_DBSource_link_H_specialties_aux_LOAD_OutputStream;
+
+-- FILE_INPUT a_o.link_H_specialites_lot.tpl
+
+CREATE OR REPLACE SOURCE SQL_DBSource_link_H_specialties_lot_LOAD USING Global.DatabaseReader ( 
+  Password: '__SOURCE_PWD__',
+  DatabaseProviderType: 'Default',
+  DatabaseName: '__SOURCE_DB__', 
+  FetchSize: __FETCH_SZ__,
+  adapterName: 'DatabaseReader',
+  QuiesceOnILCompletion: __QUIESCE_ON_IL_COMPLT__,
+  Password_encrypted: '__PWD_ENCRYPT__',
+  ConnectionURL: 'jdbc:sqlserver://__SOURCE_IP_PORT__;DatabaseName=__SOURCE_DB__',
+  Username: '__SOURCE_UNAME__',
+  Tables: '__SOURCE_DB__.dbo.Specialties2Lot KeyColumns(Specialty_id, Lot_id)'
+)
+OUTPUT TO SQL_DBSource_link_H_specialties_lot_LOAD_OutputStream;
+
+
+CREATE OR REPLACE TARGET Target_link_H_specialties2lot_LOAD USING Global.DatabaseWriter ( 
+  ConnectionRetryPolicy: 'retryInterval=__CONN_RETRY_INT__, maxRetries=__CONN_RETRY_MAX_RT__', 
+  Password: '__TARGET_PWD__', 
+  CheckPointTable: '__CHKPOINT__', 
+  Password_encrypted: '__PWD_ENCRYPT__', 
+  ConnectionURL: 'jdbc:__TARGET_DB_VEND__://__TARGET_IP_PORT__/OPS_Artnet?stringtype=unspecified',
+  DatabaseProviderType: '__DATABASE_PROVIDER_TYPE__',
+  CDDLAction: 'Process', 
+  Username: '__TARGET_UNAME__', 
+  StatementCacheSize: '__STMT_CACHE_SIZE__', 
+  CommitPolicy: 'EventCount:__COMMIT_EVNT_CNT__,Interval:__COMMIT_INTRVL__', 
+  Tables: '
+	__SOURCE_DB__.dbo.Specialties2Lot,__TARGET_DB__.core.specialties_2_lot columnmap(
+	 id=Specialties2LotId
+	,lot_id=Lot_id
+	,specialty_id=Specialty_id
+	,is_public=isPublic
+	,is_auto_tagged=isAutoTagged)',
+  PreserveSourceTransactionBoundary: '__PRSV_SRC_TRANS_BND__', 
+  BatchPolicy: 'EventCount:__BATCH_EVNT_CNT__,Interval:__BATCH_INTRVL__', 
+  adapterName: 'DatabaseWriter' ) 
+INPUT FROM  SQL_DBSource_link_H_specialties_lot_LOAD_OutputStream;
+
+
+END APPLICATION bulk_H_5_specialties_link_LOAD;
+

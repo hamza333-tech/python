@@ -1,0 +1,52 @@
+ bulk_L_login_1.tpl
+
+	 core.translation;
+	 business.logins;
+	 business.salesman;
+	 business.marketing_source;
+	 business.login_type;
+	 core.currency;
+	 core.artwork_sorting;
+	 business.coordinators;
+	 core.gallery_type;
+	 core.status;
+	 business.customer_source;
+	 core.language;
+	 core.collection_type;
+	 business.trading_status;
+	 core.nationality;
+	 core.city;
+
+
+bulk_L_cache_2.tpl
+	UserListExternal
+	UserList
+
+
+bulk_H_3.tpl
+
+	 core.gallery;
+	 core.artwork_type;
+	 core.gender;
+	 core.artist;
+	 core.specialties;
+	 core.artwork;
+	 core.artwork_gallery;
+	 core.artwork_display;
+	 core.artist_modifier;
+
+bulk_H_5.tpl
+
+	 core.specialty_2_relation;
+	 core.specialties_2_market_alert;
+	 core.specialties_2_gallery;
+	 core.specialties_2_event;
+	 core.specialties_2_artwork;
+	 core.specialties_2_artist;
+	 core.specialty_2_taxonomy_scope;
+	 core.specialty_2_artwork_type;
+	 core.specialties_2_collection;
+	 core.specialties_2_lot;
+
+
+
